@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer');
+import puppeteer from 'puppeteer';
 
 const urls = [
     'https://www.gzcrtw.com/article/%E7%A7%91%E6%8A%80%E5%8F%B2%E7%BA%B2/',
@@ -20,6 +20,9 @@ const shuffleArray = array => {
     }
     return array;
 };
+
+// 延迟函数
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function simulateScroll(page) {
     await page.evaluate(() => {
@@ -81,11 +84,10 @@ async function visitPages() {
                 });
 
                 if (!response || !response.ok()) {
-                    console.error(`Failed to load ${url}: ${response?.status() || 'unknown error'}`);
-                    continue;
+                    throw new Error(`Failed to load ${url}: ${response?.status() || 'unknown error'}`);
                 }
 
-                // 等待页面加载
+                // 等待页面加载完成
                 await page.waitForSelector('body', { timeout: 5000 });
                 
                 // 模拟滚动
@@ -94,12 +96,12 @@ async function visitPages() {
                 // 随机等待
                 const waitTime = randomWait();
                 console.log(`Staying on page for ${Math.round(waitTime/1000)} seconds...`);
-                await page.waitForTimeout(waitTime);
+                await delay(waitTime);
                 
             } catch (error) {
                 console.error(`Error visiting ${url}:`, error.message);
                 // 如果发生错误，等待5秒后继续
-                await page.waitForTimeout(5000);
+                await delay(5000);
             }
         }
 
@@ -113,12 +115,10 @@ async function visitPages() {
     }
 }
 
-// 使用错误处理运行主函数
-(async () => {
-    try {
-        await visitPages();
-    } catch (error) {
-        console.error('Fatal error:', error);
-        process.exit(1);
-    }
-})();
+// 运行主函数
+try {
+    await visitPages();
+} catch (error) {
+    console.error('Fatal error:', error);
+    process.exit(1);
+}
