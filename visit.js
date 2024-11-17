@@ -21,6 +21,9 @@ const shuffleArray = array => {
     return array;
 };
 
+// 延迟函数
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
 async function visitPages() {
     console.log('Starting browser...');
     
@@ -52,26 +55,34 @@ async function visitPages() {
             
             try {
                 // 访问页面
-                await page.goto(url, { waitUntil: 'networkidle0', timeout: 30000 });
+                await page.goto(url, { 
+                    waitUntil: 'networkidle0', 
+                    timeout: 30000 
+                });
                 
                 // 随机滚动页面
                 await page.evaluate(() => {
-                    const scrollInterval = setInterval(() => {
-                        window.scrollBy(0, Math.floor(Math.random() * 100));
-                        if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight) {
-                            clearInterval(scrollInterval);
-                        }
-                    }, 1000);
+                    return new Promise((resolve) => {
+                        const scrollInterval = setInterval(() => {
+                            window.scrollBy(0, Math.floor(Math.random() * 100));
+                            if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight) {
+                                clearInterval(scrollInterval);
+                                resolve();
+                            }
+                        }, 1000);
+                    });
                 });
                 
                 // 随机等待
                 const waitTime = randomWait();
                 console.log(`Waiting for ${waitTime/1000} seconds...`);
-                await page.waitForTimeout(waitTime);
+                await delay(waitTime);
                 
             } catch (error) {
                 console.error(`Error visiting ${url}:`, error.message);
-                continue;  // 继续访问下一个页面
+                // 如果发生错误，等待短暂时间后继续
+                await delay(5000);
+                continue;
             }
         }
     } catch (error) {
