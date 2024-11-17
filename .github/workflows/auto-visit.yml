@@ -7,70 +7,30 @@ on:
 jobs:
   visit:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     timeout-minutes: 15
     
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
+      - name: Checkout code
+        uses: actions/checkout@v3
       
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
           node-version: '20'
       
-      - name: Install dependencies
+      - name: Create package.json
         run: |
-          npm install puppeteer@latest
-      
-      - name: Create and run script
-        run: |
-          cat > visit.js << 'EOF'
-          import puppeteer from 'puppeteer';
+          echo '{
+            "name": "bloghelper",
+            "version": "1.0.0",
+            "private": true,
+            "scripts": {
+              "start": "node visit.js"
+            }
+          }' > package.json
           
-          const urls = [
-              'https://www.gzcrtw.com/article/%E7%A7%91%E6%8A%80%E5%8F%B2%E7%BA%B2/',
-              'https://www.gzcrtw.com/article/%E7%B2%BE%E5%8A%9B%E7%AE%A1%E7%90%86/',
-              'https://www.gzcrtw.com/article/%E7%AC%94%E8%AE%B0%EF%BC%88%E6%9C%AA%E5%88%86%E7%B1%BB%EF%BC%89/',
-              'https://www.gzcrtw.com/article/%E6%8A%91%E9%83%81%E7%97%87/',
-              'https://www.gzcrtw.com/article/%E8%AE%A4%E7%9F%A5%E5%8F%91%E5%B1%95/',
-              'https://gzcrtw.com/'
-          ];
+      - name: Install Puppeteer
+        run: npm install puppeteer@latest
           
-          const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-          const randomWait = () => Math.floor(Math.random() * (180 - 60 + 1) + 60) * 1000;
-          
-          const browser = await puppeteer.launch({
-              headless: 'new',
-              args: [
-                  '--no-sandbox',
-                  '--disable-setuid-sandbox'
-              ]
-          });
-          
-          try {
-              const page = await browser.newPage();
-              await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
-              
-              for (const url of urls) {
-                  try {
-                      console.log(`Visiting ${url}`);
-                      await page.goto(url, { waitUntil: 'networkidle0', timeout: 30000 });
-                      
-                      const waitTime = randomWait();
-                      console.log(`Waiting for ${waitTime/1000} seconds...`);
-                      await delay(waitTime);
-                      
-                  } catch (error) {
-                      console.error(`Error visiting ${url}:`, error.message);
-                  }
-              }
-          } finally {
-              await browser.close();
-          }
-          EOF
-          
-          node visit.js
+      - name: Run visit script
+        run: node visit.js
