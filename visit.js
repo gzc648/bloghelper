@@ -1,4 +1,4 @@
-import puppeteer from 'puppeteer';
+const puppeteer = require('puppeteer');
 
 const urls = [
     'https://www.gzcrtw.com/article/%E7%A7%91%E6%8A%80%E5%8F%B2%E7%BA%B2/',
@@ -67,7 +67,7 @@ async function visitPages() {
         // 设置 User-Agent
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
 
-        // 启用 JavaScript 和 Cookie
+        // 启用 JavaScript
         await page.setJavaScriptEnabled(true);
         
         // 随机打乱访问顺序
@@ -116,9 +116,7 @@ async function visitPages() {
 }
 
 // 运行主函数
-try {
-    await visitPages();
-} catch (error) {
+visitPages().catch(error => {
     console.error('Fatal error:', error);
     process.exit(1);
-}
+});
