@@ -58,8 +58,8 @@ async function visitPages() {
     });
 
     try {
-        const context = await browser.createIncognitoBrowserContext();
-        const page = await context.newPage();
+        // 直接创建新页面，不使用 incognito context
+        const page = await browser.newPage();
         
         // 设置视窗大小
         await page.setViewport({ width: 1920, height: 1080 });
@@ -69,6 +69,15 @@ async function visitPages() {
 
         // 启用 JavaScript
         await page.setJavaScriptEnabled(true);
+
+        // 设置额外的headers模拟真实浏览器
+        await page.setExtraHTTPHeaders({
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
+        });
         
         // 随机打乱访问顺序
         const shuffledUrls = shuffleArray([...urls]);
@@ -104,8 +113,6 @@ async function visitPages() {
                 await delay(5000);
             }
         }
-
-        await context.close();
         
     } catch (error) {
         console.error('Browser error:', error);
