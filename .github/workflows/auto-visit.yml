@@ -10,28 +10,33 @@ jobs:
     timeout-minutes: 15
     
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
       
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '20'
-          cache: 'npm'
+      
+      - name: Clear npm cache
+        run: |
+          npm cache clean --force
+          rm -rf node_modules package-lock.json
           
-      - name: Install dependencies
+      - name: Create package.json
         run: |
           echo '{
             "name": "bloghelper",
             "version": "1.0.0",
+            "type": "module",
             "private": true,
             "scripts": {
               "start": "node visit.js"
-            },
-            "dependencies": {
-              "puppeteer": "^22.8.2"
             }
           }' > package.json
-          npm install
+          
+      - name: Install Puppeteer
+        run: npm install puppeteer@latest
           
       - name: Run visit script
         run: npm start
