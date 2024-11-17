@@ -20,7 +20,7 @@ jobs:
       - name: Install dependencies
         run: |
           npm init -y
-          npm install puppeteer@latest
+          npm install puppeteer@21.5.0
           
       - name: Run visit script
         run: node visit.js
