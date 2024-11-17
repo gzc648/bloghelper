@@ -21,8 +21,24 @@ const shuffleArray = array => {
     return array;
 };
 
-// 延迟函数
-const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+async function simulateScroll(page) {
+    await page.evaluate(() => {
+        return new Promise((resolve) => {
+            let totalHeight = 0;
+            const distance = 100;
+            const timer = setInterval(() => {
+                const scrollHeight = document.documentElement.scrollHeight;
+                window.scrollBy(0, distance);
+                totalHeight += distance;
+
+                if(totalHeight >= scrollHeight) {
+                    clearInterval(timer);
+                    resolve();
+                }
+            }, 500);
+        });
+    });
+}
 
 async function visitPages() {
     console.log('Starting browser...');
@@ -33,65 +49,76 @@ async function visitPages() {
             '--no-sandbox',
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--disable-gpu'
+            '--disable-gpu',
+            '--window-size=1920,1080'
         ]
     });
 
     try {
-        const page = await browser.newPage();
+        const context = await browser.createIncognitoBrowserContext();
+        const page = await context.newPage();
         
         // 设置视窗大小
         await page.setViewport({ width: 1920, height: 1080 });
         
         // 设置 User-Agent
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+
+        // 启用 JavaScript 和 Cookie
+        await page.setJavaScriptEnabled(true);
         
         // 随机打乱访问顺序
         const shuffledUrls = shuffleArray([...urls]);
         
         for (const url of shuffledUrls) {
-            console.log(`Visiting ${url}`);
-            
             try {
+                console.log(`Visiting ${url}`);
+                
                 // 访问页面
-                await page.goto(url, { 
-                    waitUntil: 'networkidle0', 
+                const response = await page.goto(url, { 
+                    waitUntil: 'networkidle0',
                     timeout: 30000 
                 });
+
+                if (!response || !response.ok()) {
+                    console.error(`Failed to load ${url}: ${response?.status() || 'unknown error'}`);
+                    continue;
+                }
+
+                // 等待页面加载
+                await page.waitForSelector('body', { timeout: 5000 });
                 
-                // 随机滚动页面
-                await page.evaluate(() => {
-                    return new Promise((resolve) => {
-                        const scrollInterval = setInterval(() => {
-                            window.scrollBy(0, Math.floor(Math.random() * 100));
-                            if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight) {
-                                clearInterval(scrollInterval);
-                                resolve();
-                            }
-                        }, 1000);
-                    });
-                });
+                // 模拟滚动
+                await simulateScroll(page);
                 
                 // 随机等待
                 const waitTime = randomWait();
-                console.log(`Waiting for ${waitTime/1000} seconds...`);
-                await delay(waitTime);
+                console.log(`Staying on page for ${Math.round(waitTime/1000)} seconds...`);
+                await page.waitForTimeout(waitTime);
                 
             } catch (error) {
                 console.error(`Error visiting ${url}:`, error.message);
-                // 如果发生错误，等待短暂时间后继续
-                await delay(5000);
-                continue;
+                // 如果发生错误，等待5秒后继续
+                await page.waitForTimeout(5000);
             }
         }
+
+        await context.close();
+        
     } catch (error) {
         console.error('Browser error:', error);
     } finally {
         await browser.close();
-        console.log('Browser closed.');
+        console.log('Browser closed successfully.');
     }
 }
 
-// 运行脚本
-visitPages().catch(console.error);
+// 使用错误处理运行主函数
+(async () => {
+    try {
+        await visitPages();
+    } catch (error) {
+        console.error('Fatal error:', error);
+        process.exit(1);
+    }
+})();
