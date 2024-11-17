@@ -1,0 +1,50 @@
+name: Auto Read gzcrtw
+
+on:
+  schedule:
+    # 每 20 分钟运行一次
+    - cron: "*/20 * * * *"
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  browse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20  # 设置作业超时时间
+
+    env:
+      PAGE_WAIT_TIME_SECONDS: 180  # 每个页面停留时间，3分钟
+
+    steps:
+      # 检出代码库
+      - uses: actions/checkout@v3
+
+      # 安装所需的依赖项
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl xvfb
+
+      # 按顺序访问指定的网页
+      - name: Access specified pages
+        run: |
+          # 定义要访问的页面列表
+          PAGES=(
+            "https://www.gzcrtw.com/article/%E7%A7%91%E6%8A%80%E5%8F%B2%E7%BA%B2/"
+            "https://www.gzcrtw.com/article/%E7%B2%BE%E5%8A%9B%E7%AE%A1%E7%90%86/"
+            "https://www.gzcrtw.com/article/%E7%AC%94%E8%AE%B0%EF%BC%88%E6%9C%AA%E5%88%86%E7%B1%BB%EF%BC%89/"
+            "https://www.gzcrtw.com/article/%E6%8A%91%E9%83%81%E7%97%87/"
+            "https://www.gzcrtw.com/article/%E8%AE%A4%E7%9F%A5%E5%8F%91%E5%B1%95/"
+            "https://gzcrtw.com/"
+          )
+
+          # 依次访问每个页面
+          for page in "${PAGES[@]}"; do
+            echo "Accessing $page"
+            curl -s "$page" > /dev/null
+
+            echo "Waiting for $PAGE_WAIT_TIME_SECONDS seconds..."
+            sleep $PAGE_WAIT_TIME_SECONDS  # 每个页面停留3分钟
+          done
+
+          echo "All specified pages have been accessed."
+        shell: bash
