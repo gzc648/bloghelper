@@ -35,7 +35,7 @@ const targetPages = [
     }
 ];
 
-const MAX_TOTAL_TIME = 840000; // 14分钟
+const MAX_TOTAL_TIME = 840000;
 const randomWait = () => Math.floor(Math.random() * (300 - 10 + 1) + 10) * 1000;
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -84,6 +84,7 @@ async function simulateScroll(page) {
 
 async function searchAndVisit() {
     const startTime = Date.now();
+    let totalVisitTime = 0;  // 移到函数开头
     console.log('Starting browser...');
     
     const browser = await puppeteer.launch({
@@ -114,8 +115,6 @@ async function searchAndVisit() {
         console.log('Pages to visit:');
         selectedPages.forEach((page, index) => console.log(`${index + 1}. Search: ${page.searchQuery} -> ${page.url}`));
         
-        let totalVisitTime = 0;
-
         for (const targetPage of selectedPages) {
             try {
                 if (Date.now() - startTime >= MAX_TOTAL_TIME) {
@@ -123,30 +122,32 @@ async function searchAndVisit() {
                     break;
                 }
 
-                // 首先访问Google
                 console.log(`\nSearching Google for: ${targetPage.searchQuery}`);
                 await page.goto('https://www.google.com/search?q=' + encodeURIComponent(targetPage.searchQuery), {
                     waitUntil: 'networkidle0',
                     timeout: 30000
                 });
 
-                // 等待一下模拟阅读搜索结果
                 await delay(Math.random() * 5000 + 2000);
 
-                // 查找包含目标URL的链接
-                const linkHandle = await page.evaluateHandle((targetUrl) => {
+                // 修改查找和点击链接的逻辑
+                const targetUrl = targetPage.url.replace('https://', '');
+                const found = await page.evaluate(async (targetUrl) => {
                     const links = Array.from(document.querySelectorAll('a'));
-                    return links.find(link => link.href.includes(targetUrl.replace('https://', '')));
-                }, targetPage.url);
+                    const targetLink = links.find(link => link.href.includes(targetUrl));
+                    if (targetLink) {
+                        targetLink.click();
+                        return true;
+                    }
+                    return false;
+                }, targetUrl);
 
-                if (linkHandle) {
-                    console.log('Found target link in search results');
+                if (found) {
+                    console.log('Found and clicked target link');
                     
-                    // 点击找到的链接
-                    await linkHandle.click();
-                    await page.waitForNavigation({ waitUntil: 'networkidle0' });
+                    // 等待新页面加载
+                    await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 });
 
-                    // 验证当前URL是否符合预期
                     const currentUrl = page.url();
                     if (currentUrl.includes('gzcrtw.com')) {
                         console.log('Successfully navigated to target page');
@@ -164,9 +165,20 @@ async function searchAndVisit() {
                     }
                 } else {
                     console.log('Target link not found in search results');
+                    // 如果在搜索结果中找不到链接，直接访问目标URL
+                    console.log('Directly visiting target URL');
+                    await page.goto(targetPage.url, {
+                        waitUntil: 'networkidle0',
+                        timeout: 30000
+                    });
+                    await simulateScroll(page);
+                    const waitTime = randomWait();
+                    const waitTimeSeconds = Math.round(waitTime/1000);
+                    console.log(`Reading page for ${waitTimeSeconds} seconds...`);
+                    totalVisitTime += waitTimeSeconds;
+                    await delay(waitTime);
                 }
                 
-                // 随机等待一段时间再进行下一次搜索
                 await delay(Math.random() * 10000 + 5000);
                 
             } catch (error) {
@@ -188,7 +200,6 @@ async function searchAndVisit() {
     }
 }
 
-// 运行主函数
 searchAndVisit().catch(error => {
     console.error('Fatal error:', error);
     process.exit(1);
