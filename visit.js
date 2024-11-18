@@ -82,9 +82,42 @@ async function simulateScroll(page) {
     });
 }
 
+async function findAndClickLink(page, targetUrl) {
+    // 尝试多种选择器来定位链接
+    const selectors = [
+        'div.g a[href*="gzcrtw.com"]',  // 标准搜索结果
+        'div[role="main"] a[href*="gzcrtw.com"]',  // 另一种可能的结构
+        'a[href*="gzcrtw.com"]'  // 最宽泛的选择器
+    ];
+
+    for (const selector of selectors) {
+        try {
+            const links = await page.$$(selector);
+            console.log(`Found ${links.length} links matching selector: ${selector}`);
+            
+            for (const link of links) {
+                const href = await page.evaluate(el => el.href, link);
+                console.log(`Checking link: ${href}`);
+                
+                if (href.includes(targetUrl.replace('https://', ''))) {
+                    console.log(`Found matching link: ${href}`);
+                    await Promise.all([
+                        page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 }),
+                        link.click()
+                    ]);
+                    return true;
+                }
+            }
+        } catch (error) {
+            console.log(`Error with selector ${selector}:`, error.message);
+        }
+    }
+    return false;
+}
+
 async function searchAndVisit() {
     const startTime = Date.now();
-    let totalVisitTime = 0;  // 移到函数开头
+    let totalVisitTime = 0;
     console.log('Starting browser...');
     
     const browser = await puppeteer.launch({
@@ -104,7 +137,7 @@ async function searchAndVisit() {
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
         await page.setJavaScriptEnabled(true);
         await page.setExtraHTTPHeaders({
-            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',  // 添加中文语言支持
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
             'Accept-Encoding': 'gzip, deflate, br',
             'Connection': 'keep-alive',
@@ -114,7 +147,7 @@ async function searchAndVisit() {
         const selectedPages = selectRandomPages(targetPages);
         console.log('Pages to visit:');
         selectedPages.forEach((page, index) => console.log(`${index + 1}. Search: ${page.searchQuery} -> ${page.url}`));
-        
+
         for (const targetPage of selectedPages) {
             try {
                 if (Date.now() - startTime >= MAX_TOTAL_TIME) {
@@ -123,50 +156,30 @@ async function searchAndVisit() {
                 }
 
                 console.log(`\nSearching Google for: ${targetPage.searchQuery}`);
-                await page.goto('https://www.google.com/search?q=' + encodeURIComponent(targetPage.searchQuery), {
+                await page.goto(`https://www.google.com/search?q=${encodeURIComponent(targetPage.searchQuery)}&hl=zh-CN`, {
                     waitUntil: 'networkidle0',
                     timeout: 30000
                 });
 
-                await delay(Math.random() * 5000 + 2000);
+                // 等待搜索结果加载并展示一些调试信息
+                await delay(Math.random() * 5000 + 3000);
+                const pageContent = await page.content();
+                console.log(`Page title: ${await page.title()}`);
+                console.log('Search page loaded, length:', pageContent.length);
 
-                // 修改查找和点击链接的逻辑
-                const targetUrl = targetPage.url.replace('https://', '');
-                const found = await page.evaluate(async (targetUrl) => {
-                    const links = Array.from(document.querySelectorAll('a'));
-                    const targetLink = links.find(link => link.href.includes(targetUrl));
-                    if (targetLink) {
-                        targetLink.click();
-                        return true;
-                    }
-                    return false;
-                }, targetUrl);
+                const found = await findAndClickLink(page, targetPage.url);
 
                 if (found) {
-                    console.log('Found and clicked target link');
+                    console.log('Successfully navigated through search result');
+                    await simulateScroll(page);
                     
-                    // 等待新页面加载
-                    await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 });
-
-                    const currentUrl = page.url();
-                    if (currentUrl.includes('gzcrtw.com')) {
-                        console.log('Successfully navigated to target page');
-                        
-                        await page.waitForSelector('body', { timeout: 5000 });
-                        await simulateScroll(page);
-                        
-                        const waitTime = randomWait();
-                        const waitTimeSeconds = Math.round(waitTime/1000);
-                        console.log(`Reading page for ${waitTimeSeconds} seconds...`);
-                        totalVisitTime += waitTimeSeconds;
-                        await delay(waitTime);
-                    } else {
-                        console.log('Navigation led to unexpected URL:', currentUrl);
-                    }
+                    const waitTime = randomWait();
+                    const waitTimeSeconds = Math.round(waitTime/1000);
+                    console.log(`Reading page for ${waitTimeSeconds} seconds...`);
+                    totalVisitTime += waitTimeSeconds;
+                    await delay(waitTime);
                 } else {
-                    console.log('Target link not found in search results');
-                    // 如果在搜索结果中找不到链接，直接访问目标URL
-                    console.log('Directly visiting target URL');
+                    console.log('Could not find link in search results, visiting directly');
                     await page.goto(targetPage.url, {
                         waitUntil: 'networkidle0',
                         timeout: 30000
@@ -179,7 +192,10 @@ async function searchAndVisit() {
                     await delay(waitTime);
                 }
                 
-                await delay(Math.random() * 10000 + 5000);
+                // 在访问下一个页面前等待随机时间
+                const cooldownTime = Math.floor(Math.random() * 15000 + 10000);
+                console.log(`Cooling down for ${Math.round(cooldownTime/1000)} seconds...`);
+                await delay(cooldownTime);
                 
             } catch (error) {
                 console.error(`Error processing ${targetPage.url}:`, error.message);
