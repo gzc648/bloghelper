@@ -15,14 +15,13 @@ const urls = [
 // 设置最大总运行时间（14分钟 = 840000毫秒）
 const MAX_TOTAL_TIME = 840000;
 
-// 随机等待时间函数（30-60秒之间）
-const randomWait = () => Math.floor(Math.random() * (60 - 30 + 1) + 30) * 1000;
+// 随机等待时间函数（10秒到5分钟之间）
+const randomWait = () => Math.floor(Math.random() * (300 - 10 + 1) + 10) * 1000;
 
 // 随机选择1到urls.length个URLs
 const selectRandomUrls = (urls) => {
     const shuffled = [...urls].sort(() => 0.5 - Math.random());
     const MIN_URLS = 1;
-    // 随机决定要访问的页面数量（1到urls.length个）
     const numberOfUrls = Math.floor(Math.random() * (urls.length - MIN_URLS + 1) + MIN_URLS);
     const selected = shuffled.slice(0, numberOfUrls);
     console.log(`Randomly selected ${numberOfUrls} out of ${urls.length} total URLs`);
@@ -31,21 +30,39 @@ const selectRandomUrls = (urls) => {
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+// 模拟真实的滚动行为
 async function simulateScroll(page) {
     await page.evaluate(() => {
         return new Promise((resolve) => {
             let totalHeight = 0;
             const distance = 100;
+            // 随机滚动速度
+            const scrollInterval = Math.floor(Math.random() * (400 - 100 + 1) + 100);
             const timer = setInterval(() => {
                 const scrollHeight = document.documentElement.scrollHeight;
                 window.scrollBy(0, distance);
                 totalHeight += distance;
 
+                // 随机添加短暂暂停，模拟阅读
+                if (Math.random() < 0.2) {
+                    clearInterval(timer);
+                    setTimeout(() => {
+                        const newTimer = setInterval(() => {
+                            window.scrollBy(0, distance);
+                            totalHeight += distance;
+                            if(totalHeight >= scrollHeight) {
+                                clearInterval(newTimer);
+                                resolve();
+                            }
+                        }, scrollInterval);
+                    }, Math.random() * 2000);
+                }
+
                 if(totalHeight >= scrollHeight) {
                     clearInterval(timer);
                     resolve();
                 }
-            }, 200);
+            }, scrollInterval);
         });
     });
 }
@@ -78,14 +95,14 @@ async function visitPages() {
             'Upgrade-Insecure-Requests': '1'
         });
         
-        // 选择要访问的URLs（1到urls.length个）
         const selectedUrls = selectRandomUrls(urls);
         console.log('URLs to visit:');
         selectedUrls.forEach((url, index) => console.log(`${index + 1}. ${url}`));
         
+        let totalVisitTime = 0;
+
         for (const url of selectedUrls) {
             try {
-                // 检查是否超时
                 if (Date.now() - startTime >= MAX_TOTAL_TIME) {
                     console.log('Maximum time reached, stopping visits');
                     break;
@@ -103,10 +120,14 @@ async function visitPages() {
                 }
 
                 await page.waitForSelector('body', { timeout: 5000 });
+                
+                // 模拟滚动和阅读行为
                 await simulateScroll(page);
                 
                 const waitTime = randomWait();
-                console.log(`Staying on page for ${Math.round(waitTime/1000)} seconds...`);
+                const waitTimeSeconds = Math.round(waitTime/1000);
+                console.log(`Reading page for ${waitTimeSeconds} seconds...`);
+                totalVisitTime += waitTimeSeconds;
                 await delay(waitTime);
                 
             } catch (error) {
@@ -123,7 +144,7 @@ async function visitPages() {
         console.log('\nVisit summary:');
         console.log('------------------------');
         console.log(`Total execution time: ${totalTime.toFixed(1)} seconds`);
-        console.log(`Average time per page: ${(totalTime / selectedUrls.length).toFixed(1)} seconds`);
+        console.log(`Total reading time: ${totalVisitTime.toFixed(1)} seconds`);
         console.log('Browser closed successfully.');
     }
 }
