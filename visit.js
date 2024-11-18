@@ -9,7 +9,8 @@ const urls = [
     'https://www.gzcrtw.com/article/%E7%AC%94%E8%AE%B0%EF%BC%88%E6%9C%AA%E5%88%86%E7%B1%BB%EF%BC%89/',
     'https://www.gzcrtw.com/article/%E6%8A%91%E9%83%81%E7%97%87/',
     'https://www.gzcrtw.com/article/%E8%AE%A4%E7%9F%A5%E5%8F%91%E5%B1%95/',
-    'https://gzcrtw.com/'
+    'https://gzcrtw.com/',
+    'https://www.gzcrtw.com/article/%E8%B0%88%E5%88%A4%E5%9F%BA%E7%A1%80/'
 ];
 
 // 设置最大总运行时间（14分钟 = 840000毫秒）
