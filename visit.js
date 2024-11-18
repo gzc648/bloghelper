@@ -1,49 +1,64 @@
 const puppeteer = require('puppeteer');
 
-const urls = [
-    // https://www.gzcrtw.com/article/金融市场/
-    'https://www.gzcrtw.com/article/%E9%87%91%E8%9E%8D%E5%B8%82%E5%9C%BA/',
-    'https://www.gzcrtw.com/article/%E7%A7%91%E6%8A%80%E5%8F%B2%E7%BA%B2/',
-    'https://www.gzcrtw.com/article/%E7%B2%BE%E5%8A%9B%E7%AE%A1%E7%90%86/',
-    'https://www.gzcrtw.com/article/%E7%AC%94%E8%AE%B0%EF%BC%88%E6%9C%AA%E5%88%86%E7%B1%BB%EF%BC%89/',
-    'https://www.gzcrtw.com/article/%E6%8A%91%E9%83%81%E7%97%87/',
-    'https://www.gzcrtw.com/article/%E8%AE%A4%E7%9F%A5%E5%8F%91%E5%B1%95/',
-    'https://gzcrtw.com/',
-    'https://www.gzcrtw.com/article/%E8%B0%88%E5%88%A4%E5%9F%BA%E7%A1%80/'
+const targetPages = [
+    {
+        url: 'https://www.gzcrtw.com/article/%E9%87%91%E8%9E%8D%E5%B8%82%E5%9C%BA/',
+        searchQuery: '金融市场 gzcrtw'
+    },
+    {
+        url: 'https://www.gzcrtw.com/article/%E7%A7%91%E6%8A%80%E5%8F%B2%E7%BA%B2/',
+        searchQuery: '科技史纲 gzcrtw'
+    },
+    {
+        url: 'https://www.gzcrtw.com/article/%E7%B2%BE%E5%8A%9B%E7%AE%A1%E7%90%86/',
+        searchQuery: '精力管理 gzcrtw'
+    },
+    {
+        url: 'https://www.gzcrtw.com/article/%E7%AC%94%E8%AE%B0%EF%BC%88%E6%9C%AA%E5%88%86%E7%B1%BB%EF%BC%89/',
+        searchQuery: '笔记 gzcrtw'
+    },
+    {
+        url: 'https://www.gzcrtw.com/article/%E6%8A%91%E9%83%81%E7%97%87/',
+        searchQuery: '抑郁症 gzcrtw'
+    },
+    {
+        url: 'https://www.gzcrtw.com/article/%E8%AE%A4%E7%9F%A5%E5%8F%91%E5%B1%95/',
+        searchQuery: '认知发展 gzcrtw'
+    },
+    {
+        url: 'https://gzcrtw.com/',
+        searchQuery: 'gzcrtw'
+    },
+    {
+        url: 'https://www.gzcrtw.com/article/%E8%B0%88%E5%88%A4%E5%9F%BA%E7%A1%80/',
+        searchQuery: '谈判基础 gzcrtw'
+    }
 ];
 
-// 设置最大总运行时间（14分钟 = 840000毫秒）
-const MAX_TOTAL_TIME = 840000;
-
-// 随机等待时间函数（10秒到5分钟之间）
+const MAX_TOTAL_TIME = 840000; // 14分钟
 const randomWait = () => Math.floor(Math.random() * (300 - 10 + 1) + 10) * 1000;
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-// 随机选择1到urls.length个URLs
-const selectRandomUrls = (urls) => {
-    const shuffled = [...urls].sort(() => 0.5 - Math.random());
-    const MIN_URLS = 1;
-    const numberOfUrls = Math.floor(Math.random() * (urls.length - MIN_URLS + 1) + MIN_URLS);
-    const selected = shuffled.slice(0, numberOfUrls);
-    console.log(`Randomly selected ${numberOfUrls} out of ${urls.length} total URLs`);
+const selectRandomPages = (pages) => {
+    const shuffled = [...pages].sort(() => 0.5 - Math.random());
+    const MIN_PAGES = 1;
+    const numberOfPages = Math.floor(Math.random() * (pages.length - MIN_PAGES + 1) + MIN_PAGES);
+    const selected = shuffled.slice(0, numberOfPages);
+    console.log(`Randomly selected ${numberOfPages} out of ${pages.length} total pages`);
     return selected;
 };
 
-const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-
-// 模拟真实的滚动行为
 async function simulateScroll(page) {
     await page.evaluate(() => {
         return new Promise((resolve) => {
             let totalHeight = 0;
             const distance = 100;
-            // 随机滚动速度
             const scrollInterval = Math.floor(Math.random() * (400 - 100 + 1) + 100);
             const timer = setInterval(() => {
                 const scrollHeight = document.documentElement.scrollHeight;
                 window.scrollBy(0, distance);
                 totalHeight += distance;
 
-                // 随机添加短暂暂停，模拟阅读
                 if (Math.random() < 0.2) {
                     clearInterval(timer);
                     setTimeout(() => {
@@ -67,7 +82,7 @@ async function simulateScroll(page) {
     });
 }
 
-async function visitPages() {
+async function searchAndVisit() {
     const startTime = Date.now();
     console.log('Starting browser...');
     
@@ -95,43 +110,67 @@ async function visitPages() {
             'Upgrade-Insecure-Requests': '1'
         });
         
-        const selectedUrls = selectRandomUrls(urls);
-        console.log('URLs to visit:');
-        selectedUrls.forEach((url, index) => console.log(`${index + 1}. ${url}`));
+        const selectedPages = selectRandomPages(targetPages);
+        console.log('Pages to visit:');
+        selectedPages.forEach((page, index) => console.log(`${index + 1}. Search: ${page.searchQuery} -> ${page.url}`));
         
         let totalVisitTime = 0;
 
-        for (const url of selectedUrls) {
+        for (const targetPage of selectedPages) {
             try {
                 if (Date.now() - startTime >= MAX_TOTAL_TIME) {
                     console.log('Maximum time reached, stopping visits');
                     break;
                 }
 
-                console.log(`\nVisiting ${url}`);
-                
-                const response = await page.goto(url, { 
+                // 首先访问Google
+                console.log(`\nSearching Google for: ${targetPage.searchQuery}`);
+                await page.goto('https://www.google.com/search?q=' + encodeURIComponent(targetPage.searchQuery), {
                     waitUntil: 'networkidle0',
-                    timeout: 30000 
+                    timeout: 30000
                 });
 
-                if (!response || !response.ok()) {
-                    throw new Error(`Failed to load ${url}: ${response?.status() || 'unknown error'}`);
-                }
+                // 等待一下模拟阅读搜索结果
+                await delay(Math.random() * 5000 + 2000);
 
-                await page.waitForSelector('body', { timeout: 5000 });
+                // 查找包含目标URL的链接
+                const linkHandle = await page.evaluateHandle((targetUrl) => {
+                    const links = Array.from(document.querySelectorAll('a'));
+                    return links.find(link => link.href.includes(targetUrl.replace('https://', '')));
+                }, targetPage.url);
+
+                if (linkHandle) {
+                    console.log('Found target link in search results');
+                    
+                    // 点击找到的链接
+                    await linkHandle.click();
+                    await page.waitForNavigation({ waitUntil: 'networkidle0' });
+
+                    // 验证当前URL是否符合预期
+                    const currentUrl = page.url();
+                    if (currentUrl.includes('gzcrtw.com')) {
+                        console.log('Successfully navigated to target page');
+                        
+                        await page.waitForSelector('body', { timeout: 5000 });
+                        await simulateScroll(page);
+                        
+                        const waitTime = randomWait();
+                        const waitTimeSeconds = Math.round(waitTime/1000);
+                        console.log(`Reading page for ${waitTimeSeconds} seconds...`);
+                        totalVisitTime += waitTimeSeconds;
+                        await delay(waitTime);
+                    } else {
+                        console.log('Navigation led to unexpected URL:', currentUrl);
+                    }
+                } else {
+                    console.log('Target link not found in search results');
+                }
                 
-                // 模拟滚动和阅读行为
-                await simulateScroll(page);
-                
-                const waitTime = randomWait();
-                const waitTimeSeconds = Math.round(waitTime/1000);
-                console.log(`Reading page for ${waitTimeSeconds} seconds...`);
-                totalVisitTime += waitTimeSeconds;
-                await delay(waitTime);
+                // 随机等待一段时间再进行下一次搜索
+                await delay(Math.random() * 10000 + 5000);
                 
             } catch (error) {
-                console.error(`Error visiting ${url}:`, error.message);
+                console.error(`Error processing ${targetPage.url}:`, error.message);
                 await delay(5000);
             }
         }
@@ -150,7 +189,7 @@ async function visitPages() {
 }
 
 // 运行主函数
-visitPages().catch(error => {
+searchAndVisit().catch(error => {
     console.error('Fatal error:', error);
     process.exit(1);
 });
