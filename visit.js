@@ -1,6 +1,9 @@
 const puppeteer = require('puppeteer');
 
 const urls = [
+    // 在注释中保留中文URL便于理解，实际使用编码后的URL
+    // https://www.gzcrtw.com/article/金融市场/
+    'https://www.gzcrtw.com/article/%E9%87%91%E8%9E%8D%E5%B8%82%E5%9C%BA/',
     'https://www.gzcrtw.com/article/%E7%A7%91%E6%8A%80%E5%8F%B2%E7%BA%B2/',
     'https://www.gzcrtw.com/article/%E7%B2%BE%E5%8A%9B%E7%AE%A1%E7%90%86/',
     'https://www.gzcrtw.com/article/%E7%AC%94%E8%AE%B0%EF%BC%88%E6%9C%AA%E5%88%86%E7%B1%BB%EF%BC%89/',
@@ -9,19 +12,32 @@ const urls = [
     'https://gzcrtw.com/'
 ];
 
-// 随机等待时间函数（60-180秒之间）
-const randomWait = () => Math.floor(Math.random() * (180 - 60 + 1) + 60) * 1000;
+// 设置最大总运行时间（14分钟 = 840000毫秒）
+const MAX_TOTAL_TIME = 840000;
 
-// 随机打乱数组顺序
-const shuffleArray = array => {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
+// 随机等待时间函数（30-60秒之间）
+const randomWait = () => Math.floor(Math.random() * (60 - 30 + 1) + 30) * 1000;
+
+// 随机选择URLs
+const selectRandomUrls = (urls, maxTimeInMs) => {
+    const shuffled = [...urls].sort(() => 0.5 - Math.random());
+    const selected = [];
+    let estimatedTime = 0;
+    const averageVisitTime = 45000; // 假设平均每个页面访问45秒
+
+    for (const url of shuffled) {
+        const estimatedNextVisit = averageVisitTime;
+        if (estimatedTime + estimatedNextVisit < maxTimeInMs) {
+            selected.push(url);
+            estimatedTime += estimatedNextVisit;
+        } else {
+            break;
+        }
     }
-    return array;
+    
+    return selected;
 };
 
-// 延迟函数
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function simulateScroll(page) {
@@ -38,12 +54,13 @@ async function simulateScroll(page) {
                     clearInterval(timer);
                     resolve();
                 }
-            }, 500);
+            }, 200); // 加快滚动速度
         });
     });
 }
 
 async function visitPages() {
+    const startTime = Date.now();
     console.log('Starting browser...');
     
     const browser = await puppeteer.launch({
@@ -58,19 +75,10 @@ async function visitPages() {
     });
 
     try {
-        // 直接创建新页面，不使用 incognito context
         const page = await browser.newPage();
-        
-        // 设置视窗大小
         await page.setViewport({ width: 1920, height: 1080 });
-        
-        // 设置 User-Agent
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
-
-        // 启用 JavaScript
         await page.setJavaScriptEnabled(true);
-
-        // 设置额外的headers模拟真实浏览器
         await page.setExtraHTTPHeaders({
             'Accept-Language': 'en-US,en;q=0.9',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -79,14 +87,20 @@ async function visitPages() {
             'Upgrade-Insecure-Requests': '1'
         });
         
-        // 随机打乱访问顺序
-        const shuffledUrls = shuffleArray([...urls]);
+        // 选择要访问的URLs
+        const selectedUrls = selectRandomUrls(urls, MAX_TOTAL_TIME);
+        console.log(`Selected ${selectedUrls.length} URLs to visit`);
         
-        for (const url of shuffledUrls) {
+        for (const url of selectedUrls) {
             try {
+                // 检查是否超时
+                if (Date.now() - startTime >= MAX_TOTAL_TIME) {
+                    console.log('Maximum time reached, stopping visits');
+                    break;
+                }
+
                 console.log(`Visiting ${url}`);
                 
-                // 访问页面
                 const response = await page.goto(url, { 
                     waitUntil: 'networkidle0',
                     timeout: 30000 
@@ -96,20 +110,15 @@ async function visitPages() {
                     throw new Error(`Failed to load ${url}: ${response?.status() || 'unknown error'}`);
                 }
 
-                // 等待页面加载完成
                 await page.waitForSelector('body', { timeout: 5000 });
-                
-                // 模拟滚动
                 await simulateScroll(page);
                 
-                // 随机等待
                 const waitTime = randomWait();
                 console.log(`Staying on page for ${Math.round(waitTime/1000)} seconds...`);
                 await delay(waitTime);
                 
             } catch (error) {
                 console.error(`Error visiting ${url}:`, error.message);
-                // 如果发生错误，等待5秒后继续
                 await delay(5000);
             }
         }
@@ -119,6 +128,7 @@ async function visitPages() {
     } finally {
         await browser.close();
         console.log('Browser closed successfully.');
+        console.log(`Total execution time: ${(Date.now() - startTime) / 1000} seconds`);
     }
 }
 
