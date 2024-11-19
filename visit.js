@@ -2,36 +2,36 @@ const puppeteer = require('puppeteer');
 
 const targetPages = [
     {
-        url: 'https://www.gzcrtw.com/article/%E9%87%91%E8%9E%8D%E5%B8%82%E5%9C%BA/',
-        searchQuery: '金融市场 gzcrtw Blog'
+        url: 'https://www.gzcrtw.com/article/financial%20market',
+        searchQuery: 'financial market gzcrtw Blog'
     },
     {
-        url: 'https://www.gzcrtw.com/article/%E7%A7%91%E6%8A%80%E5%8F%B2%E7%BA%B2/',
-        searchQuery: '科技史纲 gzcrtw Blog'
+        url: 'https://www.gzcrtw.com/article/Outline%20of%20the%20history%20of%20science%20and%20technology',
+        searchQuery: 'Outline of the history of science and technology gzcrtw Blog'
     },
     {
-        url: 'https://www.gzcrtw.com/article/%E7%B2%BE%E5%8A%9B%E7%AE%A1%E7%90%86/',
-        searchQuery: '精力管理 gzcrtw Blog'
+        url: 'https://www.gzcrtw.com/article/Energetic%20management',
+        searchQuery: 'Energetic management gzcrtw Blog'
     },
     {
-        url: 'https://www.gzcrtw.com/article/%E7%AC%94%E8%AE%B0%EF%BC%88%E6%9C%AA%E5%88%86%E7%B1%BB%EF%BC%89/',
-        searchQuery: '笔记 gzcrtw Blog'
+        url: 'https://www.gzcrtw.com/article/Notes%20(unclassified)',
+        searchQuery: 'Notes (unclassified) gzcrtw Blog'
     },
     {
-        url: 'https://www.gzcrtw.com/article/%E6%8A%91%E9%83%81%E7%97%87/',
-        searchQuery: '抑郁症 gzcrtw Blog'
+        url: 'https://www.gzcrtw.com/article/Negotiation%20Basics',
+        searchQuery: 'clinical depression gzcrtw Blog'
     },
     {
-        url: 'https://www.gzcrtw.com/article/%E8%AE%A4%E7%9F%A5%E5%8F%91%E5%B1%95/',
-        searchQuery: '认知发展 gzcrtw Blog'
+        url: 'https://www.gzcrtw.com/article/cognitive%20development',
+        searchQuery: 'cognitive development gzcrtw Blog'
     },
     {
         url: 'https://gzcrtw.com/',
         searchQuery: 'gzcrtw Blog'
     },
     {
-        url: 'https://www.gzcrtw.com/article/%E8%B0%88%E5%88%A4%E5%9F%BA%E7%A1%80/',
-        searchQuery: '谈判基础 gzcrtw Blog'
+        url: 'https://www.gzcrtw.com/article/Negotiation%20Basics',
+        searchQuery: 'Negotiation Basics gzcrtw Blog'
     }
 ];
 
