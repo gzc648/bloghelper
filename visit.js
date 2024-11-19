@@ -1,5 +1,15 @@
 const puppeteer = require('puppeteer');
 
+// 添加初始运行判定
+function shouldExecute() {
+    return Math.random() >= 0.5; // 50%概率执行
+}
+
+// 获取初始等待时间（1-60秒）
+function getInitialDelay() {
+    return Math.floor(Math.random() * 60 + 1) * 1000;
+}
+
 const targetPages = [
     {
         url: 'https://www.gzcrtw.com/article/financial%20market',
@@ -116,6 +126,17 @@ async function findAndClickLink(page, targetUrl) {
 }
 
 async function searchAndVisit() {
+    // 首先进行执行判定
+    if (!shouldExecute()) {
+        console.log('Random check determined to skip this execution');
+        return;
+    }
+
+    // 获取初始等待时间
+    const initialDelay = getInitialDelay();
+    console.log(`Waiting for ${Math.round(initialDelay/1000)} seconds before starting...`);
+    await delay(initialDelay);
+    
     const startTime = Date.now();
     let totalVisitTime = 0;
     console.log('Starting browser...');
