@@ -2,7 +2,7 @@ const puppeteer = require('puppeteer');
 
 // 添加初始运行判定
 function shouldExecute() {
-    return Math.random() >= 0.05; // 50%概率执行
+    return Math.random() >= 0.025; // 50%概率执行
 }
 
 // 获取初始等待时间（1-60秒）
